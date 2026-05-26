@@ -1,0 +1,28 @@
+# PhishGuard ML Pipeline — Python dependencies
+# Pin versions for reproducibility
+# Author: Akshay | https://akshay.fruvvi.com
+
+# Core ML
+scikit-learn==1.5.1
+numpy==1.26.4
+pandas==2.2.2
+
+# ONNX export
+skl2onnx==1.17.0
+onnxruntime==1.18.1      # For local validation of exported model
+
+# Visualization & analysis (notebooks)
+matplotlib==3.9.1
+seaborn==0.13.2
+ipykernel==6.29.5
+jupyter==1.0.0
+
+# Data download utilities
+requests==2.32.3
+tqdm==4.66.4
+
+# Type checking
+mypy==1.11.0
+
+# Code quality
+ruff==0.5.5

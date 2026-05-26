@@ -1,0 +1,87 @@
+# PhishGuard — .gitignore
+# Author: Akshay | https://akshay.fruvvi.com
+
+# ── Environment ───────────────────────────────────────────────
+.env
+.env.local
+.env.production
+.env.staging
+
+# ── Node / Extension ─────────────────────────────────────────
+node_modules/
+extension/dist/
+extension/.plasmo/
+
+# Build artifacts — never commit, always build from source
+*.js.map
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# ── ML Datasets — often large, download via script ───────────
+ml/datasets/*.csv
+ml/datasets/*.json
+ml/datasets/*.bz2
+
+# Trained models — reproduce via train.py
+ml/exports/*.onnx
+# BUT keep a placeholder:
+!ml/exports/.gitkeep
+
+# Extension model — populated by copy-model.sh
+extension/public/models/*.onnx
+!extension/public/models/.gitkeep
+
+# Evaluation plots (reproducible)
+ml/exports/eval/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ── Docker ───────────────────────────────────────────────────
+.docker/
+
+# ── macOS ────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# ── Windows ──────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ── Linux ────────────────────────────────────────────────────
+*~
+.nfs*
+
+# ── IDE ───────────────────────────────────────────────────────
+.idea/
+.vscode/settings.json
+.vscode/launch.json
+*.swp
+*.swo
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Backups from copy-model.sh ───────────────────────────────
+*.onnx.backup-*

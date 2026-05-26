@@ -1,0 +1,73 @@
+##############################################################
+# PhishGuard — Docker Compose
+# Author: Akshay | https://akshay.fruvvi.com
+#
+# Usage:
+#   Start backend only:   docker compose up phishguard-api
+#   Start everything:     docker compose up
+#   Rebuild images:       docker compose build --no-cache
+##############################################################
+
+name: phishguard
+
+services:
+
+  # ── FastAPI Backend ──────────────────────────────────────────
+  phishguard-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: phishguard-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      # Mount source in development so changes hot-reload (dev only)
+      - ./backend/app:/app/app:ro
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - phishguard-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Development: Caddy reverse proxy (optional) ──────────────
+  # Provides HTTPS locally so the extension can make TLS requests
+  caddy:
+    image: caddy:2-alpine
+    container_name: phishguard-caddy
+    profiles: ["https"]       # Only starts with: docker compose --profile https up
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./docs/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - phishguard-api
+    networks:
+      - phishguard-net
+
+networks:
+  phishguard-net:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhishGuard</title>
+<style>
+  /* ── Design Tokens ───────────────────────────────────────── */
+  :root {
+    --bg: #0d0f14;
+    --surface: #161923;
+    --surface-2: #1d2130;
+    --border: rgba(255,255,255,0.07);
+    --border-hover: rgba(255,255,255,0.12);
+    --text-primary: #f0f2f5;
+    --text-secondary: #8892a4;
+    --text-muted: #4d5566;
+    --accent: #6366f1;
+    --font: 'Inter', system-ui, sans-serif;
+  }
+  /* Threat palette */
+  .t-safe     { --threat-color: #22c55e; --threat-glow: rgba(34,197,94,0.15); }
+  .t-low      { --threat-color: #eab308; --threat-glow: rgba(234,179,8,0.15); }
+  .t-medium   { --threat-color: #f97316; --threat-glow: rgba(249,115,22,0.15); }
+  .t-high     { --threat-color: #ef4444; --threat-glow: rgba(239,68,68,0.18); }
+  .t-critical { --threat-color: #dc2626; --threat-glow: rgba(220,38,38,0.25); }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    width: 360px;
+    min-height: 480px;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ── Layout ──────────────────────────────────────────────── */
+  .root { display: flex; flex-direction: column; height: 100%; }
+
+  /* ── Header ──────────────────────────────────────────────── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent) 0%, #818cf8 100%);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .logo-text {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+  }
+  .logo-text span { color: var(--accent); }
+  .header-actions { display: flex; gap: 4px; }
+  .icon-btn {
+    width: 28px; height: 28px;
+    border: none; background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    font-size: 15px;
+  }
+  .icon-btn:hover { background: var(--surface-2); color: var(--text-secondary); }
+
+  /* ── URL Bar ─────────────────────────────────────────────── */
+  .url-bar {
+    margin: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .url-text {
+    flex: 1;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: 'Menlo', 'Consolas', monospace;
+  }
+  .scan-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+  }
+  .scan-btn:hover { opacity: 0.85; }
+  .scan-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* ── Main Result Card ────────────────────────────────────── */
+  .result-card {
+    margin: 0 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color 0.3s;
+  }
+  .result-card.has-threat {
+    border-color: var(--threat-color);
+    background: linear-gradient(135deg, var(--surface) 0%, var(--threat-glow) 100%);
+  }
+
+  /* ── Threat Meter (SVG arc) ──────────────────────────────── */
+  .meter-wrap {
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .meter-svg { transform: rotate(-90deg); }
+  .meter-bg { fill: none; stroke: var(--surface-2); stroke-width: 6; stroke-linecap: round; }
+  .meter-fill {
+    fill: none;
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke: var(--threat-color, #6366f1);
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.3s;
+  }
+  .meter-center {
+    position: absolute;
+    text-align: center;
+    pointer-events: none;
+  }
+  .meter-score {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: var(--threat-color, var(--text-primary));
+    line-height: 1;
+    transition: color 0.3s;
+  }
+  .meter-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+  }
+
+  /* ── Threat Badge ────────────────────────────────────────── */
+  .threat-badge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .badge-level {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .level-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--threat-color, var(--text-muted));
+    box-shadow: 0 0 6px var(--threat-color, transparent);
+    flex-shrink: 0;
+  }
+  .level-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--threat-color, var(--text-primary));
+  }
+  .scan-time {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .threat-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+
+  /* ── Indicators List ─────────────────────────────────────── */
+  .indicators-section { margin: 12px 16px 0; }
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .indicators { display: flex; flex-direction: column; gap: 4px; }
+  .indicator {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    text-align: left;
+  }
+  .indicator:hover {
+    background: var(--surface-2);
+    border-color: var(--border-hover);
+  }
+  .indicator-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .sev-info    { background: #3b82f6; }
+  .sev-warning { background: #f97316; }
+  .sev-danger  { background: #ef4444; }
+  .indicator-content { flex: 1; }
+  .indicator-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+  .indicator-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    margin-top: 2px;
+    display: none;
+  }
+  .indicator.expanded .indicator-desc { display: block; }
+
+  /* ── Scanning State ──────────────────────────────────────── */
+  .scanning-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 32px 20px;
+  }
+  .pulse-ring {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    animation: pulse-ring 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse-ring {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(1.15); }
+  }
+  .scanning-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* ── Idle State ──────────────────────────────────────────── */
+  .idle-state {
+    display: flex; flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 28px 20px;
+    gap: 8px;
+  }
+  .idle-icon { font-size: 32px; line-height: 1; }
+  .idle-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .idle-sub   { font-size: 12px; color: var(--text-secondary); }
+
+  /* ── Footer ──────────────────────────────────────────────── */
+  .footer {
+    margin-top: auto;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .privacy-badge {
+    display: flex; align-items: center; gap: 4px;
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.15);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+    color: #4ade80;
+  }
+  .footer-dev {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .footer-dev:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="root" id="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">🛡</div>
+      <span class="logo-text">Phish<span>Guard</span></span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="refreshBtn" title="Rescan">↻</button>
+      <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+    </div>
+  </header>
+
+  <!-- URL Bar -->
+  <div class="url-bar">
+    <span class="url-text" id="urlText">Detecting current page...</span>
+    <button class="scan-btn" id="scanBtn">Scan</button>
+  </div>
+
+  <!-- Content -->
+  <div id="content">
+    <!-- Populated by JS -->
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="privacy-badge">
+      <span>🔒</span> Local-only · No tracking
+    </div>
+    <a href="https://akshay.fruvvi.com" target="_blank" class="footer-dev">
+      by Akshay
+    </a>
+  </footer>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────
+const state = {
+  status: 'idle',
+  url: null,
+  result: null,
+  error: null,
+};
+
+// ─── Arc math ─────────────────────────────────────────────────
+const RADIUS = 38, CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+function probToDashOffset(prob) {
+  const pct = Math.min(Math.max(prob, 0), 1);
+  return CIRCUMFERENCE * (1 - pct);
+}
+
+// ─── Render ───────────────────────────────────────────────────
+function render() {
+  const content = document.getElementById('content');
+  if (state.status === 'scanning') {
+    content.innerHTML = renderScanning();
+  } else if (state.status === 'done' && state.result) {
+    content.innerHTML = renderResult(state.result);
+    setupIndicatorToggles();
+    // Animate meter after DOM paint
+    requestAnimationFrame(() => {
+      const fill = document.getElementById('meterFill');
+      if (fill) {
+        fill.style.strokeDashoffset = probToDashOffset(state.result.probability);
+      }
+    });
+  } else {
+    content.innerHTML = renderIdle();
+  }
+}
+
+function renderScanning() {
+  return `
+    <div class="scanning-state">
+      <div class="pulse-ring"></div>
+      <span class="scanning-text">Analyzing URL...</span>
+    </div>
+  `;
+}
+
+function renderIdle() {
+  return `
+    <div class="idle-state">
+      <div class="idle-icon">🛡</div>
+      <div class="idle-title">Ready to scan</div>
+      <div class="idle-sub">Navigate to a page and PhishGuard will<br>automatically analyze it for threats.</div>
+    </div>
+  `;
+}
+
+function renderResult(result) {
+  const levelClass = `t-${result.level}`;
+  const displayMap = {
+    safe:     { label: 'Safe',             desc: 'No phishing indicators detected.' },
+    low:      { label: 'Low Risk',         desc: 'Minor suspicious signals. Proceed with caution.' },
+    medium:   { label: 'Suspicious',       desc: 'Multiple phishing indicators detected.' },
+    high:     { label: 'High Risk',        desc: 'Strong phishing signals. Do not enter credentials.' },
+    critical: { label: 'Phishing Detected', desc: 'Matches known phishing patterns. Do not proceed.' },
+  };
+  const d = displayMap[result.level];
+  const hasThreats = result.indicators && result.indicators.length > 0;
+
+  const indicatorsHTML = hasThreats ? `
+    <div class="indicators-section">
+      <div class="section-label">Threat Indicators</div>
+      <div class="indicators">
+        ${result.indicators.map(ind => `
+          <button class="indicator" data-id="${ind.id}">
+            <div class="indicator-dot sev-${ind.severity}"></div>
+            <div class="indicator-content">
+              <div class="indicator-label">${ind.label}</div>
+              <div class="indicator-desc">${ind.description}</div>
+            </div>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  return `
+    <div class="result-card ${hasThreats ? 'has-threat' : ''} ${levelClass}">
+      <!-- Arc meter -->
+      <div class="meter-wrap">
+        <svg class="meter-svg" width="100" height="100" viewBox="0 0 100 100">
+          <circle class="meter-bg" cx="50" cy="50" r="${RADIUS}" />
+          <circle
+            class="meter-fill"
+            id="meterFill"
+            cx="50" cy="50" r="${RADIUS}"
+            stroke-dasharray="${CIRCUMFERENCE}"
+            stroke-dashoffset="${CIRCUMFERENCE}"
+          />
+        </svg>
+        <div class="meter-center">
+          <div class="meter-score">${result.confidence}</div>
+          <div class="meter-label">risk %</div>
+        </div>
+      </div>
+
+      <!-- Badge + description -->
+      <div class="threat-badge">
+        <div class="badge-level">
+          <div class="level-dot"></div>
+          <span class="level-text">${d.label}</span>
+        </div>
+        <span class="scan-time">${result.scanDurationMs}ms</span>
+      </div>
+      <p class="threat-desc">${d.desc}</p>
+    </div>
+    ${indicatorsHTML}
+  `;
+}
+
+// ─── Indicator toggle ─────────────────────────────────────────
+function setupIndicatorToggles() {
+  document.querySelectorAll('.indicator').forEach(el => {
+    el.addEventListener('click', () => el.classList.toggle('expanded'));
+  });
+}
+
+// ─── Chrome messaging ─────────────────────────────────────────
+async function getCurrentScan() {
+  return new Promise(resolve => {
+    chrome.runtime.sendMessage({ type: 'GET_CURRENT_SCAN' }, resolve);
+  });
+}
+
+async function triggerScan(url) {
+  return new Promise(resolve => {
+    chrome.runtime.sendMessage({ type: 'SCAN_URL', payload: { url } }, resolve);
+  });
+}
+
+// ─── Init ─────────────────────────────────────────────────────
+async function init() {
+  // Get current tab URL
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = tabs[0];
+  if (tab?.url) {
+    state.url = tab.url;
+    document.getElementById('urlText').textContent = tab.url;
+  }
+
+  // Try to load existing scan result
+  const existing = await getCurrentScan();
+  if (existing) {
+    Object.assign(state, existing);
+  }
+
+  render();
+}
+
+// ─── Button handlers ──────────────────────────────────────────
+document.getElementById('scanBtn').addEventListener('click', async () => {
+  if (!state.url) return;
+  state.status = 'scanning';
+  state.result = null;
+  render();
+  await triggerScan(state.url);
+
+  // Poll for result (simple approach for popup context)
+  const poll = setInterval(async () => {
+    const scan = await getCurrentScan();
+    if (scan && scan.status !== 'scanning') {
+      Object.assign(state, scan);
+      render();
+      clearInterval(poll);
+    }
+  }, 300);
+});
+
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  document.getElementById('scanBtn').click();
+});
+
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  chrome.runtime.openOptionsPage();
+});
+
+init();
+</script>
+</body>
+</html>

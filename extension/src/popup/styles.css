@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base reset for popup context ─────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  /* Popup dimensions — Chrome enforces min-width of 25px */
+  width: 360px;
+  min-height: 480px;
+}
+
+body {
+  background-color: #0d0f14;
+  color: #f0f2f5;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Selection ─────────────────────────────────────────────────── */
+::selection {
+  background: rgba(99, 102, 241, 0.3);
+  color: #f0f2f5;
+}
+
+/* ── Focus visible ─────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Custom utilities ──────────────────────────────────────────── */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Threat level color utilities */
+  .threat-safe     { color: #22c55e; }
+  .threat-low      { color: #eab308; }
+  .threat-medium   { color: #f97316; }
+  .threat-high     { color: #ef4444; }
+  .threat-critical { color: #dc2626; }
+
+  .threat-bg-safe     { background-color: rgba(34,  197, 94,  0.12); }
+  .threat-bg-low      { background-color: rgba(234, 179, 8,   0.12); }
+  .threat-bg-medium   { background-color: rgba(249, 115, 22,  0.12); }
+  .threat-bg-high     { background-color: rgba(239, 68,  68,  0.15); }
+  .threat-bg-critical { background-color: rgba(220, 38,  38,  0.20); }
+
+  .threat-border-safe     { border-color: rgba(34,  197, 94,  0.30); }
+  .threat-border-low      { border-color: rgba(234, 179, 8,   0.30); }
+  .threat-border-medium   { border-color: rgba(249, 115, 22,  0.30); }
+  .threat-border-high     { border-color: rgba(239, 68,  68,  0.35); }
+  .threat-border-critical { border-color: rgba(220, 38,  38,  0.45); }
+}

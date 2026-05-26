@@ -1,0 +1,36 @@
+{
+  "name": "phishguard-extension",
+  "version": "1.0.0",
+  "description": "Privacy-first AI phishing detection browser extension",
+  "author": "Akshay <https://akshay.fruvvi.com>",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "vite build --watch --mode development",
+    "build": "vite build",
+    "build:prod": "NODE_ENV=production vite build",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx --max-warnings 0",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "onnxruntime-web": "^1.18.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "@types/react": "^18.3.4",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.8.0",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.1",
+    "vite-plugin-web-extension": "^4.1.1"
+  }
+}
