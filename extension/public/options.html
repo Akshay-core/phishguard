@@ -1,12 +1,201 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PhishGuard Settings</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d0f14; color: #f0f2f5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px; padding: 32px; max-width: 520px; margin: 0 auto;
+    }
+    .header { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
+    .logo-icon {
+      width: 36px; height: 36px; border-radius: 9px;
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+    h1 span { color: #6366f1; }
+    .subtitle { font-size: 11px; color: #4d5566; margin-top: 2px; }
+
+    .section-label {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.09em; color: #4d5566; margin-bottom: 8px;
+    }
+    .card {
+      background: #161923; border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px; padding: 4px 16px; margin-bottom: 24px;
+    }
+    .setting-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-info { flex: 1; }
+    .setting-title { font-size: 13px; font-weight: 500; color: #f0f2f5; margin-bottom: 3px; }
+    .setting-desc  { font-size: 11px; color: #4d5566; line-height: 1.45; }
+
+    /* Toggle switch */
+    .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute; inset: 0; cursor: pointer;
+      background: #1d2130; border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px; transition: background 0.2s, border-color 0.2s;
+    }
+    .toggle-track::before {
+      content: ""; position: absolute;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #fff; left: 2px; top: 2px;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .toggle-track { background: #6366f1; border-color: #6366f1; }
+    .toggle input:checked + .toggle-track::before { transform: translateX(16px); }
+
+    .privacy-list { list-style: none; padding: 12px 0; }
+    .privacy-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 6px 0; font-size: 12px; color: #8892a4;
+    }
+    .privacy-list li span:first-child { flex-shrink: 0; }
+
+    .dev-card {
+      background: #161923; border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px; padding: 16px; margin-bottom: 24px;
+    }
+    .dev-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .dev-avatar {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: #fff;
+    }
+    .dev-name { font-size: 14px; font-weight: 600; color: #f0f2f5; }
+    .dev-role { font-size: 11px; color: #4d5566; margin-top: 2px; }
+    .dev-links { display: flex; flex-wrap: wrap; gap: 6px; }
+    .dev-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; color: #8892a4; text-decoration: none;
+      padding: 4px 10px; border-radius: 5px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
+    }
+    .dev-link:hover {
+      color: #818cf8; background: rgba(99,102,241,0.12);
+      border-color: rgba(99,102,241,0.3);
+    }
+    .footer-note {
+      text-align: center; font-size: 10px; color: #2d3142; margin-top: 8px;
+    }
+  </style>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="module" src="/src/options/index.tsx"></script>
+
+  <header class="header">
+    <div class="logo-icon">🛡</div>
+    <div>
+      <h1>Phish<span>Guard</span> Settings</h1>
+      <p class="subtitle">Privacy-first phishing detection</p>
+    </div>
+  </header>
+
+  <!-- Detection settings -->
+  <p class="section-label">Detection</p>
+  <div class="card">
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-title">Auto-scan on navigation</div>
+        <div class="setting-desc">Automatically scan every URL you visit. Recommended.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="autoScan" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-title">Threat intelligence feed
+          <span style="font-size:9px;background:rgba(99,102,241,0.15);color:#818cf8;
+            border:1px solid rgba(99,102,241,0.25);border-radius:3px;
+            padding:1px 5px;margin-left:6px;font-weight:600;">NETWORK</span>
+        </div>
+        <div class="setting-desc">Check hostnames against URLHaus database. Sends hostname only — never the full URL.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="threatIntel">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-title">Safe site confirmations</div>
+        <div class="setting-desc">Show a notification when a site is confirmed safe.</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="safeNotif">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Privacy -->
+  <p class="section-label">Privacy Guarantees</p>
+  <div class="card" style="padding:8px 16px;">
+    <ul class="privacy-list">
+      <li><span>🔒</span><span>ML model runs entirely in your browser via WebAssembly</span></li>
+      <li><span>🚫</span><span>URLs never sent to any server (unless threat intel is enabled)</span></li>
+      <li><span>🗑</span><span>Scan history cleared when browser closes (session storage only)</span></li>
+      <li><span>📊</span><span>No analytics, no telemetry, no data collection</span></li>
+    </ul>
+  </div>
+
+  <!-- Developer -->
+  <p class="section-label">Developer</p>
+  <div class="dev-card">
+    <div class="dev-header">
+      <div class="dev-avatar">AK</div>
+      <div>
+        <div class="dev-name">Akshay</div>
+        <div class="dev-role">Cybersecurity Engineer · Privacy-First AI</div>
+      </div>
+    </div>
+    <div class="dev-links">
+      <a href="https://akshay.fruvvi.com"                                   target="_blank" class="dev-link">◈ Portfolio</a>
+      <a href="https://github.com/Akshay-core"                              target="_blank" class="dev-link">⌥ GitHub</a>
+      <a href="https://linkedin.com/in/akshay-tb-791bb4372"                 target="_blank" class="dev-link">⊞ LinkedIn</a>
+      <a href="https://www.instagram.com/akshayyyy_2007"                    target="_blank" class="dev-link">◉ Instagram</a>
+    </div>
+  </div>
+
+  <p class="footer-note">PhishGuard v1.0.0 · MIT License · Built with ♥ by Akshay</p>
+
+<script>
+// Load saved settings
+chrome.storage.sync.get("phishguard:settings", result => {
+  const s = result["phishguard:settings"] || {};
+  document.getElementById("autoScan").checked   = s.enableAutoScan   !== false;
+  document.getElementById("threatIntel").checked = !!s.enableThreatIntel;
+  document.getElementById("safeNotif").checked   = !!s.showSafeNotifications;
+});
+
+// Save on change
+function save() {
+  chrome.storage.sync.set({
+    "phishguard:settings": {
+      enableAutoScan:         document.getElementById("autoScan").checked,
+      enableThreatIntel:      document.getElementById("threatIntel").checked,
+      showSafeNotifications:  document.getElementById("safeNotif").checked,
+    }
+  });
+}
+document.getElementById("autoScan").addEventListener("change",   save);
+document.getElementById("threatIntel").addEventListener("change", save);
+document.getElementById("safeNotif").addEventListener("change",  save);
+</script>
 </body>
 </html>
