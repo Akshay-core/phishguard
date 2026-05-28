@@ -1,3 +1,5 @@
+import { getRegistrableDomain, normalizeURLInput } from "../lib/domain-intelligence";
+
 /**
  * PhishGuard — URL Parser Utility
  *
@@ -44,21 +46,12 @@ const EMPTY_PARSED: ParsedURL = {
 export function parseURL(rawURL: string): ParsedURL {
   let url: URL;
   try {
-    url = new URL(rawURL);
+    url = new URL(normalizeURLInput(rawURL));
   } catch {
     return { ...EMPTY_PARSED, href: rawURL };
   }
 
-  const parts = url.hostname.split(".");
-
-  // Registrable domain = last two parts (handles .co.uk etc. approximately)
-  const registrableDomain =
-    parts.length >= 2 ? parts.slice(-2).join(".") : url.hostname;
-
-  const subdomain =
-    parts.length > 2 ? parts.slice(0, -2).join(".") : "";
-
-  const tld = parts[parts.length - 1] ?? "";
+  const { registrableDomain, subdomain, tld } = getRegistrableDomain(url.hostname);
 
   return {
     href: url.href,

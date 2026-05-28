@@ -9,6 +9,7 @@
  */
 
 import { URLFeatures } from "../types";
+import { getDomainContext, normalizeURLInput } from "./domain-intelligence";
 
 // Brand names commonly spoofed in phishing attacks
 const BRAND_KEYWORDS = [
@@ -16,6 +17,7 @@ const BRAND_KEYWORDS = [
   "netflix", "instagram", "twitter", "whatsapp", "ebay", "chase",
   "bankofamerica", "wellsfargo", "citibank", "hsbc", "barclays",
   "linkedin", "dropbox", "adobe", "steam", "roblox", "coinbase",
+  "github", "gitlab", "icloud", "office365", "cloudflare",
 ];
 
 // High-risk/free TLDs frequently used in phishing
@@ -55,23 +57,25 @@ export function computeEntropy(str: string): number {
  */
 export function extractFeatures(rawURL: string): URLFeatures {
   let parsed: URL;
+  const normalizedURL = normalizeURLInput(rawURL);
   try {
-    parsed = new URL(rawURL);
+    parsed = new URL(normalizedURL);
   } catch {
     // Unparseable URL — treat as maximally suspicious
     return getDefaultSuspiciousFeatures(rawURL);
   }
 
   const hostname = parsed.hostname.toLowerCase();
-  const fullURL = rawURL.toLowerCase();
-  const tld = hostname.split(".").pop() ?? "";
+  const fullURL = normalizedURL.toLowerCase();
+  const domainContext = getDomainContext(normalizedURL);
+  const tld = domainContext?.tld ?? hostname.split(".").pop() ?? "";
 
   // Count special characters that don't belong in legitimate URLs
-  const specialCharCount = (rawURL.match(/[@\-_~%=]/g) ?? []).length;
+  const specialCharCount = (normalizedURL.match(/[@\-_~%=]/g) ?? []).length;
 
   // Digit ratio — phishing domains often have numbers (paypa1, g00gle)
-  const digits = (rawURL.match(/\d/g) ?? []).length;
-  const digitRatio = rawURL.length > 0 ? digits / rawURL.length : 0;
+  const digits = (normalizedURL.match(/\d/g) ?? []).length;
+  const digitRatio = normalizedURL.length > 0 ? digits / normalizedURL.length : 0;
 
   // Subdomain depth — legitimate sites rarely have >2 levels
   const subdomainCount = hostname.split(".").length - 2;
@@ -103,14 +107,14 @@ export function extractFeatures(rawURL: string): URLFeatures {
   );
 
   return {
-    urlLength: rawURL.length,
+    urlLength: normalizedURL.length,
     domainLength: hostname.length,
     subdomainCount: Math.max(0, subdomainCount),
     hasIPAddress,
     hasHTTPS: parsed.protocol === "https:",
     specialCharCount,
     digitRatio,
-    entropyScore: computeEntropy(rawURL),
+    entropyScore: computeEntropy(normalizedURL),
     pathDepth,
     hasLoginKeyword,
     hasBrandKeyword,

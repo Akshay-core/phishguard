@@ -15,6 +15,7 @@
 import { ThreatLevel, ThreatScore } from "../types";
 import { URLFeatures } from "../types";
 import { extractFeatures, getTriggeredIndicators } from "./feature-extractor";
+import { getDomainContext } from "./domain-intelligence";
 import { runInference, initModel } from "./onnx-runner";
 
 // Thresholds tuned for precision — minimize false positives on legitimate sites
@@ -43,16 +44,19 @@ export async function scanURL(url: string): Promise<ThreatScore> {
 
   const features: URLFeatures = extractFeatures(url);
   const { probability, durationMs } = await runInference(features);
+  const domainContext = getDomainContext(url);
 
-  // Rule-based override: if any hard indicators fire, floor the level
-  const level = applyHardRules(features, probabilityToLevel(probability));
+  // Rule-based override: obvious malicious combinations raise risk, trusted
+  // ownership context caps weak ML false positives.
+  const level = applyContextualRules(features, probabilityToLevel(probability), domainContext);
+  const finalProbability = calibrateProbabilityForLevel(probability, level);
 
   const indicators = getTriggeredIndicators(features);
 
   return {
     level,
-    probability,
-    confidence: Math.round(probability * 100),
+    probability: finalProbability,
+    confidence: Math.round(finalProbability * 100),
     indicators,
     scanDurationMs: Math.round(durationMs),
   };
@@ -65,30 +69,73 @@ export async function scanURL(url: string): Promise<ThreatScore> {
  * Tradeoff: Slightly increases false positive rate for edge cases,
  * but dramatically improves detection of known-bad patterns.
  */
-function applyHardRules(features: URLFeatures, modelLevel: ThreatLevel): ThreatLevel {
+function applyContextualRules(
+  features: URLFeatures,
+  modelLevel: ThreatLevel,
+  domainContext: ReturnType<typeof getDomainContext>
+): ThreatLevel {
   // If the URL has an IP address AND no HTTPS AND a login keyword,
   // it's almost certainly phishing regardless of model confidence.
   if (features.hasIPAddress && !features.hasHTTPS && features.hasLoginKeyword) {
     return "critical";
   }
 
-  // Suspicious TLD + brand keyword = almost certainly spoofing
-  if (features.tldSuspicious && features.hasBrandKeyword) {
-    const elevated = elevateLevel(modelLevel, 1);
-    return elevated;
+  // Suspicious TLD + brand impersonation = almost certainly spoofing.
+  if (features.tldSuspicious && domainContext?.isBrandImpersonation) {
+    return features.hasLoginKeyword ? "critical" : maxLevel(modelLevel, "high");
+  }
+
+  if (features.tldSuspicious && features.hasLoginKeyword) {
+    return maxLevel(modelLevel, "high");
+  }
+
+  if (domainContext?.isTrustedDomain) {
+    return capTrustedDomainLevel(features, modelLevel);
   }
 
   return modelLevel;
 }
 
-/**
- * Elevate a threat level by N steps.
- * "safe" + 1 = "low", "high" + 1 = "critical"
- */
-function elevateLevel(current: ThreatLevel, steps: number): ThreatLevel {
+function capTrustedDomainLevel(features: URLFeatures, modelLevel: ThreatLevel): ThreatLevel {
+  const dangerousSignals = [
+    features.hasIPAddress,
+    !features.hasHTTPS,
+    features.tldSuspicious,
+    features.hasRedirectParam,
+    features.hasPortInURL,
+  ].filter(Boolean).length;
+
+  if (dangerousSignals === 0 && features.subdomainCount <= 3) {
+    return minLevel(modelLevel, features.hasLoginKeyword ? "low" : "safe");
+  }
+
+  if (dangerousSignals <= 1) {
+    return minLevel(modelLevel, "medium");
+  }
+
+  return modelLevel;
+}
+
+function minLevel(current: ThreatLevel, ceiling: ThreatLevel): ThreatLevel {
   const order: ThreatLevel[] = ["safe", "low", "medium", "high", "critical"];
-  const idx = order.indexOf(current);
-  return order[Math.min(idx + steps, order.length - 1)];
+  return order[Math.min(order.indexOf(current), order.indexOf(ceiling))];
+}
+
+function maxLevel(current: ThreatLevel, floor: ThreatLevel): ThreatLevel {
+  const order: ThreatLevel[] = ["safe", "low", "medium", "high", "critical"];
+  return order[Math.max(order.indexOf(current), order.indexOf(floor))];
+}
+
+function calibrateProbabilityForLevel(probability: number, level: ThreatLevel): number {
+  const ceilings: Record<ThreatLevel, number> = {
+    safe: 0.12,
+    low: 0.35,
+    medium: 0.65,
+    high: 0.85,
+    critical: 1.0,
+  };
+
+  return Math.min(probability, ceilings[level]);
 }
 
 // ─── UI Helpers ───────────────────────────────────────────────────────────────

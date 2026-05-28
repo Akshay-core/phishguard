@@ -30,6 +30,7 @@ BRAND_KEYWORDS: frozenset = frozenset({
     "netflix", "instagram", "twitter", "whatsapp", "ebay", "chase",
     "bankofamerica", "wellsfargo", "citibank", "hsbc", "barclays",
     "linkedin", "dropbox", "adobe", "steam", "roblox", "coinbase",
+    "github", "gitlab", "icloud", "office365", "cloudflare",
 })
 
 SUSPICIOUS_TLDS: frozenset = frozenset({
@@ -108,9 +109,10 @@ def extract(url: str, domain_age_days: int = -1) -> URLFeatureVector:
     Returns:
         URLFeatureVector with all 15 features normalized to [0, 1]
     """
-    # Ensure URL has a scheme for urlparse to work correctly
+    # Ensure URL has a scheme for urlparse to work correctly. Defaulting to
+    # HTTPS avoids treating normal user-entered domains as insecure.
     if not url.startswith(("http://", "https://")):
-        url = "http://" + url
+        url = "https://" + url
 
     try:
         parsed = urlparse(url)

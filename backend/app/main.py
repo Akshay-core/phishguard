@@ -22,7 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import threat, health
+from app.api.v1 import health, investigate, threat
 from app.core.config import settings
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
@@ -123,3 +123,4 @@ async def server_error_handler(request: Request, exc):
 
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(threat.router, prefix="/api/v1/threat", tags=["threat"])
+app.include_router(investigate.router, prefix="/api/v1/investigate", tags=["investigate"])
