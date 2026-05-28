@@ -13,6 +13,7 @@ module.exports = (env, argv) => {
     entry: {
       background: "./src/background/index.ts",
       content:    "./src/content/index.ts",
+      offscreen:  "./src/offscreen/index.ts",
       popup:      "./src/popup/popup.ts",
     },
 
@@ -40,6 +41,10 @@ module.exports = (env, argv) => {
       extensions: [".ts", ".tsx", ".js"],
       alias: {
         "@": path.resolve(__dirname, "src"),
+        "onnxruntime-web$": path.resolve(
+          __dirname,
+          "node_modules/onnxruntime-web/dist/ort.wasm.min.mjs"
+        ),
       },
       fallback: {
         fs:     false,
@@ -52,6 +57,7 @@ module.exports = (env, argv) => {
       new CopyPlugin({
         patterns: [
           { from: "public/manifest.json",  to: "manifest.json" },
+          { from: "public/offscreen.html",  to: "offscreen.html" },
           { from: "public/popup.html",      to: "popup.html" },
           { from: "public/options.html",    to: "options.html" },
           {
@@ -66,12 +72,12 @@ module.exports = (env, argv) => {
           },
           // ONNX Runtime WASM files — required for local inference
           {
-            from: "node_modules/onnxruntime-web/dist/*.wasm",
+            from: "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm",
             to:   "ort-wasm/[name][ext]",
           },
           {
-            from: "node_modules/onnxruntime-web/dist/ort.js",
-            to:   "ort-wasm/ort.js",
+            from: "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs",
+            to:   "ort-wasm/[name][ext]",
           },
         ],
       }),

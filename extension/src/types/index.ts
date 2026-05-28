@@ -81,6 +81,7 @@ export interface ScanState {
 
 export type MessageType =
   | "SCAN_URL"
+  | "OFFSCREEN_SCAN_URL"
   | "SCAN_RESULT"
   | "GET_CURRENT_SCAN"
   | "CLEAR_SCAN";

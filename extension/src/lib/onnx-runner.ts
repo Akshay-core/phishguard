@@ -33,8 +33,15 @@ export async function initModel(): Promise<void> {
   }
 
   loadingPromise = (async () => {
-    // ONNX Runtime needs its WASM binaries — point to bundled location
-    ort.env.wasm.wasmPaths = chrome.runtime.getURL("ort-wasm/");
+    // ONNX Runtime Web 1.26 dynamically loads a companion .mjs file.
+    // This runner must execute in an extension page/offscreen document,
+    // because import() is forbidden in MV3 service worker globals.
+    ort.env.wasm.numThreads = 1;
+    ort.env.wasm.proxy = false;
+    ort.env.wasm.wasmPaths = {
+      mjs: chrome.runtime.getURL("ort-wasm/ort-wasm-simd-threaded.mjs"),
+      wasm: chrome.runtime.getURL("ort-wasm/ort-wasm-simd-threaded.wasm"),
+    };
 
     const modelPath = chrome.runtime.getURL("models/phishguard.onnx");
     const modelBuffer = await fetch(modelPath).then((r) => r.arrayBuffer());

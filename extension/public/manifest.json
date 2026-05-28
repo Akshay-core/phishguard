@@ -10,7 +10,8 @@
     "tabs",
     "storage",
     "notifications",
-    "activeTab"
+    "activeTab",
+    "offscreen"
   ],
 
   "host_permissions": [

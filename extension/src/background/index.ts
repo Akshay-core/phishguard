@@ -10,12 +10,11 @@
  * Author: Akshay | https://akshay.fruvvi.com
  */
 
-import { initModel } from "../lib/onnx-runner";
-import { scanURL } from "../lib/risk-engine";
-import { ChromeMessage, ScanState, DEFAULT_SETTINGS } from "../types";
+import { ChromeMessage, ScanState, DEFAULT_SETTINGS, ThreatScore } from "../types";
 
-// Pre-initialize the model on service worker startup to reduce first-scan latency
-initModel().catch((err) => console.error("[PhishGuard] Model init failed:", err));
+const OFFSCREEN_DOCUMENT_PATH = "offscreen.html";
+const OFFSCREEN_SCAN_TIMEOUT_MS = 15_000;
+let creatingOffscreenDocument: Promise<void> | null = null;
 
 // ─── Tab Navigation Listener ─────────────────────────────────────────────────
 
@@ -34,6 +33,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
 chrome.runtime.onMessage.addListener(
   (message: ChromeMessage, sender, sendResponse) => {
+    if (message.type === "OFFSCREEN_SCAN_URL") return false;
     handleMessage(message, sendResponse);
     return true; // Keep the message channel open for async response
   }
@@ -90,7 +90,7 @@ async function performScan(tabId: number, url: string): Promise<void> {
   await chrome.action.setBadgeBackgroundColor({ color: "#6B7280", tabId });
 
   try {
-    const result = await scanURL(url);
+    const result = await scanURLInOffscreen(url);
 
     await setScanState(tabId, {
       status: "done",
@@ -124,6 +124,78 @@ async function performScan(tabId: number, url: string): Promise<void> {
 
     console.error("[PhishGuard] Scan failed:", errorMessage);
   }
+}
+
+interface OffscreenScanResponse {
+  ok: boolean;
+  result?: ThreatScore;
+  error?: string;
+}
+
+async function scanURLInOffscreen(url: string): Promise<ThreatScore> {
+  await ensureOffscreenDocument();
+
+  const response = await sendMessageWithTimeout<OffscreenScanResponse>(
+    { type: "OFFSCREEN_SCAN_URL", payload: { url } },
+    OFFSCREEN_SCAN_TIMEOUT_MS
+  );
+
+  if (!response?.ok || !response.result) {
+    throw new Error(response?.error ?? "Offscreen scan failed.");
+  }
+
+  return response.result;
+}
+
+async function ensureOffscreenDocument(): Promise<void> {
+  const offscreenURL = chrome.runtime.getURL(OFFSCREEN_DOCUMENT_PATH);
+
+  if (chrome.runtime.getContexts) {
+    const contexts = await chrome.runtime.getContexts({
+      contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
+      documentUrls: [offscreenURL],
+    });
+
+    if (contexts.length > 0) return;
+  }
+
+  if (!creatingOffscreenDocument) {
+    creatingOffscreenDocument = chrome.offscreen.createDocument({
+      url: OFFSCREEN_DOCUMENT_PATH,
+      reasons: [chrome.offscreen.Reason.WORKERS],
+      justification: "Runs local ONNX/WASM phishing inference outside the MV3 service worker.",
+    }).catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!message.includes("Only a single offscreen document may be created")) {
+        throw err;
+      }
+    }).finally(() => {
+      creatingOffscreenDocument = null;
+    });
+  }
+
+  await creatingOffscreenDocument;
+}
+
+function sendMessageWithTimeout<T>(
+  message: ChromeMessage,
+  timeoutMs: number
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Scan backend timed out after ${timeoutMs}ms.`));
+    }, timeoutMs);
+
+    chrome.runtime.sendMessage(message, (response: T) => {
+      clearTimeout(timeoutId);
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+
+      resolve(response);
+    });
+  });
 }
 
 // ─── Storage Helpers ──────────────────────────────────────────────────────────
